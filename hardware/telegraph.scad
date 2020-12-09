@@ -1,8 +1,9 @@
-ring_inner_r = 30;
-ring_height = 12.5; // this should be about the size of a switch
-dimple_depth = 1.5;
+ring_outer_r = 43;
+switch_height = 13;
+ring_inner_r = ring_outer_r - switch_height;
+dimple_depth = 1.8;
+ring_height = ring_outer_r - ring_inner_r; 
 dimple_diameter = 8;
-ring_outer_r = ring_inner_r + ring_height + dimple_depth;
 ring_thickness = 12;
 feet_height = 7;
 play = .4; // space between parts that should fit.
@@ -16,21 +17,23 @@ function up(v,w) = [v.x*w.x, v.y*w.y, v.z*w.z];
 
 
 // choose what to generate
-rings();
+//rings();
 //lever();
-//everything();
+//switch_ring();
+everything();
+
 
 
 module switch()
 {
     cube_dims = [6,7.5,3.5] + [.5, .5, .5];
-    button_diameter = 3.5;
+    button_diameter = 3.7;
     
     // switch housing
     translate(up(cube_dims,[ -.5, -.5, 0]) - [0,0,1+d]) cube(cube_dims + [0,0,d+1]);
     
     // button pole
-    translate([0,0,cube_dims.z-d]) cylinder( d = button_diameter, h = 10+2*d, $fn = 40);
+    cylinder( d = button_diameter, h = switch_height+ d, $fn = 40);
 }
 
 module ring( inner_r, outer_r, h, center = false)
@@ -62,7 +65,6 @@ module foot(expand = false)
             }
 
             screw_offset = [-d, ring_thickness + feet_inset + foot_extent/2, ring_height + foot_extent/2];
-            for (h =[])
             translate(screw_offset) rotate([0,90,0]) screw( $fn= 50);
         }
     
@@ -76,7 +78,7 @@ module feet(expand = false)
 
 module switch_ring()
 {
-    inner_guide_depth = .3;
+    inner_guide_depth = .6;
     guide_depth = .4;
     guide_width = 1.2;
     
@@ -94,18 +96,19 @@ module switch_ring()
             translate([0,0,offset])
                 ring( inner_r = ring_inner_r - inner_guide_depth , outer_r = ring_inner_r + +d, h = trench_width-2*play, center=true,$fn = 1000);
         }
-        ring(inner_r = ring_outer_r - guide_depth, outer_r = ring_outer_r + 1, h = guide_width, center = true, $fn = 500);
+        //ring(inner_r = ring_outer_r - guide_depth, outer_r = ring_outer_r + 1, h = guide_width, center = true, $fn = 500);
         
         for ( i = [0:switch_count-1])
         {
             rotate([0,0, angle/2 + i * angle])
             {
-                translate([0,ring_inner_r - d, 0]) rotate([-90,0,0]) 
+                #translate([0,ring_inner_r - d, 0]) rotate([-90,0,0]) 
                     switch();
-                translate([0,ring_inner_r + ring_height - protrusion - d, 0]) rotate([-90,0,0]) 
-                    cylinder( d1 = d, d2 = dimple_diameter, h = dimple_depth + d + protrusion, $fn = 40);
+                translate([0,ring_outer_r - dimple_depth - d, 0]) rotate([-90,0,0]) 
+                    cylinder( d1 = d, d2 = dimple_diameter, h = dimple_depth + d , $fn = 40);
             }
         }
+        
         cutter_dims = [ring_outer_r, 2*ring_outer_r, ring_thickness] + [d, 2*d, 2*d];
         translate([cutter_dims.x/2, 0, 0]) cube(cutter_dims, center=true);
     }
@@ -164,12 +167,16 @@ module lever()
     hole_size = 17;
     taper_start = 10.5;
     
+    cut_width = 1;
+    cut_depth = 1.2;
+    cavity = 3;
+    
     module cutter()
     {
         translate([0, inner_dims.y/2 - d, -hole_size/2]) rotate([0, -45, 0]) cube(cutter_dims);
     }
     
-    inner_dims = [ ring_outer_r + axis_d/2, ring_thickness + 2 * play, lever_d2];
+    inner_dims = [ ring_outer_r + axis_d/2, ring_thickness + 4 * play, lever_d2];
     outer_dims = inner_dims + [lever_brace_thickness, 2* lever_brace_thickness , -2*d];
     cutter_dims = [100, lever_brace_thickness + 2*d, 100];
 
@@ -183,6 +190,23 @@ module lever()
         rotate([0,180,0]) cutter();
         
         translate([outer_dims.x - taper_start, 0, 0]) cube(outer_dims + [d,d,d], center = true);
+        
+        cutter_dims = [cut_depth + cavity + d, inner_dims.y + 2, cut_width];
+        for (i = [-1,1])
+            translate([-(inner_dims.x + cutter_dims.x)/2 + lever_brace_thickness/2 + 2*d, 0, i * dimple_diameter/2])
+                cube( cutter_dims, center = true);
+                
+        vert_dims = [2*cut_depth, cut_width/2, dimple_diameter*.6];
+        back_offset = -(inner_dims.x - lever_brace_thickness)/2;
+        step = (inner_dims.y - dimple_diameter)/12;
+        
+        for (side = [1,-1]) for ( s = [[0,-1],[3,1]])
+        {
+            translate([back_offset, side * (dimple_diameter/2 + step * s.x), s.y * side * (dimple_diameter*.2 + d)]) cube(vert_dims, center = true);
+        }
+                
+        cavity_dims = [cavity, inner_dims.y + 2, dimple_diameter];
+        translate([-inner_dims.x/2 + lever_brace_thickness/2 - (cut_depth+cavity_dims.x/2),0,0]) cube(cavity_dims, center=true);
     }
     for ( i = [-1, 1]) translate([outer_dims.x/2 - axis_d/2, i * (inner_dims.y/2 + lever_brace_thickness/2),0])
         hull()
@@ -198,9 +222,7 @@ module lever()
     translate( [-outer_dims.x/2 + d, 0, 0]) rotate([0,-90,0]) cylinder(d1 = lever_d1, d2 = lever_d2, h = lever_stem_length, $fn = 100);
     
     // bump
-    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) rotate([0,90,0]) cylinder( d1 = dimple_diameter - play, d2 = d, h = dimple_depth + protrusion, $fn = 100);
-    
-    
+    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) rotate([0,90,0]) cylinder( d1 = dimple_diameter - play, d2 = d, h = dimple_depth, $fn = 100);
 }
 module rings()
 {
@@ -217,7 +239,8 @@ module everything()
             translate([-(ring_outer_r + axis_d/2 - lever_brace_thickness)/2, 0, 0]) rotate([90,0,0]) lever();
             rings();
         }
+        
+        // Cut everything in half to see whether the inner parts are placed correctly
         //translate([-100, 0, -100]) cube([200,200,200]);
     }
 }
-
