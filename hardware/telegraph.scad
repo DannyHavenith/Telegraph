@@ -6,7 +6,7 @@ ring_height = ring_outer_r - ring_inner_r;
 dimple_diameter = 8;
 ring_thickness = 12;
 feet_height = 7;
-play = .4; // space between parts that should fit.
+play = .2; // space between parts that should fit.
 feet_inset = 1+play;
 trench_depth = 3;
 trench_width = 2;
@@ -18,11 +18,10 @@ function up(v,w) = [v.x*w.x, v.y*w.y, v.z*w.z];
 
 // choose what to generate
 //rings();
-//lever();
+rotate([90,0,0]) lever();
 //switch_ring();
-everything();
-
-
+//everything();
+//switch_support_ring();
 
 module switch()
 {
@@ -64,8 +63,9 @@ module foot(expand = false)
                     translate([0,-rib_depth, ring_thickness/2 + play -trench_width/2 + offset]) cube([feet_height, trench_depth, trench_width - 2 * play]);
             }
 
-            screw_offset = [-d, ring_thickness + feet_inset + foot_extent/2, ring_height + foot_extent/2];
-            translate(screw_offset) rotate([0,90,0]) screw( $fn= 50);
+            screw_offset = [-d, ring_thickness + feet_inset + foot_extent*.4, ring_height + foot_extent * .4];
+            translate(screw_offset) 
+                rotate([0,90,0]) screw( $fn= 50);
         }
     
 }
@@ -118,7 +118,7 @@ module switch_ring()
 
 module screw()
 {
-    head_d = 9;
+    head_d = 9.5;
     head_depth = 4;
     screw_d = 5;
     screw_length = 24;
@@ -157,26 +157,30 @@ module flatroundedcube( dimensions, r)
 }
 
 
-lever_brace_thickness = 5;
+lever_brace_thickness = 7; // thickness of the "metal" brace of the lever
 module lever()
 {
-    lever_d2 = 14;
-    lever_d1 = 12;
+    lever_d2 = 15; // the diameter of the actual lever, top
+    lever_d1 = 12; // bottom
     lever_length = 60;
     lever_stem_length = lever_length - lever_d2/2;
-    hole_size = 17;
+    hole_size = 17; // size of the gap between the two "pointers" of the lever
     taper_start = 10.5;
     
+    // The pin that clicks in to the cavities on the switch ring is floating 
+    // in the lever. There's a cavity behind the pin and the pin is on a spring that
+    // has been cut into the top of the brace.
     cut_width = 1;
     cut_depth = 1.2;
     cavity = 3;
     
+    // squares used to cut a gap in the side of the lever brace.
     module cutter()
     {
         translate([0, inner_dims.y/2 - d, -hole_size/2]) rotate([0, -45, 0]) cube(cutter_dims);
     }
     
-    inner_dims = [ ring_outer_r + axis_d/2, ring_thickness + 4 * play, lever_d2];
+    inner_dims = [ ring_outer_r + axis_d/2 + play, ring_thickness + 4 * play, lever_d2];
     outer_dims = inner_dims + [lever_brace_thickness, 2* lever_brace_thickness , -2*d];
     cutter_dims = [100, lever_brace_thickness + 2*d, 100];
 
@@ -221,8 +225,8 @@ module lever()
     // actual lever
     translate( [-outer_dims.x/2 + d, 0, 0]) rotate([0,-90,0]) cylinder(d1 = lever_d1, d2 = lever_d2, h = lever_stem_length, $fn = 100);
     
-    // bump
-    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) rotate([0,90,0]) cylinder( d1 = dimple_diameter - play, d2 = d, h = dimple_depth, $fn = 100);
+    // bump/pin
+    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) rotate([0,90,0]) cylinder( d1 = dimple_diameter - play, d2 = d, h = dimple_depth + play, $fn = 100);
 }
 module rings()
 {
