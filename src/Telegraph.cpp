@@ -23,12 +23,12 @@ namespace
     struct Button
     {
         const Pin pin;
-        const char * const value;
+        const char * const mqttValue;
         bool lastPosition;
     };
 
     Button buttons[] = {
-            {D0, "1", true},
+            {D2, "1", true},
             {D5, "2", true},
             {D6, "3", true},
             {D7, "4", true},
@@ -147,7 +147,7 @@ namespace
             button.lastPosition = position;
             if (not position)
             {
-                signalValue( button.value);
+                signalValue( button.mqttValue);
             }
         }
     }
