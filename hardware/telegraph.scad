@@ -11,7 +11,6 @@ feet_inset = 1+play;
 trench_depth = 3;
 trench_width = 2;
 axis_d = 10;
-protrusion = .3; // how much the button sticks out of the dimple
 d = 0.01;
 function up(v,w) = [v.x*w.x, v.y*w.y, v.z*w.z];
 
@@ -58,12 +57,14 @@ module foot(expand = false)
             {
                 cube(feet_dims);
                 
-                rib_depth = trench_depth/3;
+                rib_depth = trench_depth/5;
                 for (offset = [-3, 3])
                     translate([0,-rib_depth, ring_thickness/2 + play -trench_width/2 + offset]) cube([feet_height, trench_depth, trench_width - 2 * play]);
             }
-
-            screw_offset = [-d, ring_thickness + feet_inset + foot_extent*.4, ring_height + foot_extent * .4];
+            screw_offset = [-d, ring_thickness + feet_inset + foot_extent/2, ring_height + foot_extent/2];
+            // the dimensions below are better suited, but I need the ones above for compatibility 
+            // with the box that this is built into
+            //screw_offset = [-d, ring_thickness + feet_inset + foot_extent*.4, ring_height + foot_extent * .4];
             translate(screw_offset) 
                 rotate([0,90,0]) screw( $fn= 50);
         }
@@ -157,7 +158,7 @@ module flatroundedcube( dimensions, r)
 }
 
 
-lever_brace_thickness = 7; // thickness of the "metal" brace of the lever
+lever_brace_thickness = 6; // thickness of the "metal" brace of the lever
 module lever()
 {
     lever_d2 = 15; // the diameter of the actual lever, top
@@ -172,7 +173,7 @@ module lever()
     // has been cut into the top of the brace.
     cut_width = 1;
     cut_depth = 1.2;
-    cavity = 3;
+    cavity = 2;
     
     // squares used to cut a gap in the side of the lever brace.
     module cutter()
@@ -180,7 +181,7 @@ module lever()
         translate([0, inner_dims.y/2 - d, -hole_size/2]) rotate([0, -45, 0]) cube(cutter_dims);
     }
     
-    inner_dims = [ ring_outer_r + axis_d/2 + play, ring_thickness + 4 * play, lever_d2];
+    inner_dims = [ ring_outer_r + axis_d/2 + 2*play, ring_thickness + 4 * play, lever_d2];
     outer_dims = inner_dims + [lever_brace_thickness, 2* lever_brace_thickness , -2*d];
     cutter_dims = [100, lever_brace_thickness + 2*d, 100];
 
@@ -240,11 +241,12 @@ module everything()
     {
         union()
         {
-            translate([-(ring_outer_r + axis_d/2 - lever_brace_thickness)/2, 0, 0]) rotate([90,0,0]) lever();
+            translate([-(ring_outer_r + axis_d/2 + play + lever_brace_thickness - axis_d)/2, 0, 0]) 
+                rotate([90,0,0]) lever();
             rings();
         }
         
         // Cut everything in half to see whether the inner parts are placed correctly
-        //translate([-100, 0, -100]) cube([200,200,200]);
+        translate([-200, 0, -100]) cube([400,200,200]);
     }
 }
