@@ -17,7 +17,8 @@ function up(v,w) = [v.x*w.x, v.y*w.y, v.z*w.z];
 
 // choose what to generate
 //rings();
-rotate([90,0,0]) lever();
+//rotate([90,0,0]) 
+    lever();
 //switch_ring();
 //everything();
 //switch_support_ring();
@@ -141,7 +142,7 @@ module switch_support_ring()
                 ring( inner_r = ring_inner_r - trench_depth , outer_r = ring_inner_r + 10, h = trench_width, center=true,$fn = 100);
         cylinder( d = axis_d, h = ring_thickness + 2 * d, center=true, $fn=1000);
         
-        slot_dims = [feet_height, axis_d, ring_thickness];
+        slot_dims = [feet_height, axis_d-play/2, ring_thickness];
         translate(up(slot_dims, [.5, 0, 0])) cube( slot_dims + [d,0,2*d], center=true);
     }
 }
@@ -157,7 +158,6 @@ module flatroundedcube( dimensions, r)
                 translate(up( inner, [x,y,0])) cylinder( h = dimensions[2], r = r, $fn = 20);
 }
 
-
 lever_brace_thickness = 6; // thickness of the "metal" brace of the lever
 module lever()
 {
@@ -172,18 +172,19 @@ module lever()
     // in the lever. There's a cavity behind the pin and the pin is on a spring that
     // has been cut into the top of the brace.
     cut_width = 1;
-    cut_depth = 1.2;
+    cut_depth = 1.6;
     cavity = 2;
     
     // squares used to cut a gap in the side of the lever brace.
     module cutter()
     {
+        cutter_dims = [100, lever_brace_thickness + 2*d, 100];
         translate([0, inner_dims.y/2 - d, -hole_size/2]) rotate([0, -45, 0]) cube(cutter_dims);
     }
     
     inner_dims = [ ring_outer_r + axis_d/2 + 2*play, ring_thickness + 4 * play, lever_d2];
     outer_dims = inner_dims + [lever_brace_thickness, 2* lever_brace_thickness , -2*d];
-    cutter_dims = [100, lever_brace_thickness + 2*d, 100];
+    offset_to_upper_brace = -inner_dims.x/2 + lever_brace_thickness/2;
 
     difference()
     {
@@ -194,25 +195,37 @@ module lever()
         cutter();
         rotate([0,180,0]) cutter();
         
+        // cut off the far end, near the axis
         translate([outer_dims.x - taper_start, 0, 0]) cube(outer_dims + [d,d,d], center = true);
         
-        cutter_dims = [cut_depth + cavity + d, inner_dims.y + 2, cut_width];
+        spring_extent = inner_dims.x/2;
+        // slits to separate the spring from the lever
+        cutter_dims = [spring_extent + cut_depth + cavity + d, inner_dims.y + cut_depth + d, cut_width];
         for (i = [-1,1])
-            translate([-(inner_dims.x + cutter_dims.x)/2 + lever_brace_thickness/2 + 2*d, 0, i * dimple_diameter/2])
+            translate([ offset_to_upper_brace + cutter_dims.x/2 - cut_depth -d, -cut_depth/2 -d, i * dimple_diameter/2])
                 cube( cutter_dims, center = true);
                 
-        vert_dims = [2*cut_depth, cut_width/2, dimple_diameter*.6];
-        back_offset = -(inner_dims.x - lever_brace_thickness)/2;
-        step = (inner_dims.y - dimple_diameter)/12;
+        // cavity behind the long tongue of the spring
+        long_cavity_dims = [cutter_dims.x + cavity, cavity, dimple_diameter];
+        translate([ offset_to_upper_brace + long_cavity_dims.x/2 - cut_depth - cavity -d, -inner_dims.y/2 - cut_depth - long_cavity_dims.y/2,0])
+            cube(long_cavity_dims, center=true);
         
-        for (side = [1,-1]) for ( s = [[0,-1],[3,1]])
-        {
-            translate([back_offset, side * (dimple_diameter/2 + step * s.x), s.y * side * (dimple_diameter*.2 + d)]) cube(vert_dims, center = true);
-        }
-                
-        cavity_dims = [cavity, inner_dims.y + 2, dimple_diameter];
-        translate([-inner_dims.x/2 + lever_brace_thickness/2 - (cut_depth+cavity_dims.x/2),0,0]) cube(cavity_dims, center=true);
+        // cavity behind the spring
+        short_cavity_dims = [cavity, inner_dims.y + 2 * cut_depth + 2 * d, dimple_diameter+cut_width];
+        translate([-inner_dims.x/2 + lever_brace_thickness/2 - (cut_depth+short_cavity_dims.x/2),0,0]) cube(short_cavity_dims, center=true);
+
+        // disconnect the spring from the lever on one side
+        disconnect_dims = [ 2 * cut_depth, cut_width, dimple_diameter + 2*d];
+        translate([offset_to_upper_brace - disconnect_dims.x/2 + 2*d, inner_dims.y/2 - disconnect_dims.y/2, 0])
+            cube(disconnect_dims, center=true);
+        vert_dims = [2*cut_depth, cut_width/2, dimple_diameter*.6];
+        
+        // cut the lever in half to check the cavities.
+        //translate([0,200,0]) cube([400,400,400], center=true);
+
     }
+    
+    //translate([offset_to_upper_brace, 0, 8]) cylinder( d=1, center=true, $fn=8);
     for ( i = [-1, 1]) translate([outer_dims.x/2 - axis_d/2, i * (inner_dims.y/2 + lever_brace_thickness/2),0])
         hull()
         {
@@ -227,8 +240,11 @@ module lever()
     translate( [-outer_dims.x/2 + d, 0, 0]) rotate([0,-90,0]) cylinder(d1 = lever_d1, d2 = lever_d2, h = lever_stem_length, $fn = 100);
     
     // bump/pin
-    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) rotate([0,90,0]) cylinder( d1 = dimple_diameter - play, d2 = d, h = dimple_depth + play, $fn = 100);
+    translate([ -inner_dims.x/2 + d + lever_brace_thickness/2, 0, 0]) 
+        rotate([0,90,0]) 
+            cylinder( d1 = dimple_diameter, d2 = d, h = dimple_depth + 2*play, $fn = 100);
 }
+
 module rings()
 {
     color( "cyan") switch_ring();
